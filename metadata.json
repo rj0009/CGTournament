@@ -1,0 +1,6 @@
+{
+  "name": "NCSS CG Tournament Live",
+  "description": "Live multi-station tournament scoring dashboard and leaderboard for NCSS Corporate Group fun team activities.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
