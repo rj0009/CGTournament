@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Station, Team, MatchResult } from '../types';
 import { Gamepad2, CheckCircle2, Trash2, Trophy, Dices, Target, Flame, Activity, Sparkles, Send, RefreshCw } from 'lucide-react';
+import { getStations, getTeams, getMatches, submitScore, deleteMatch } from '../services/api';
 
 interface StationMasterProps {
   stationId: string;
@@ -46,24 +47,19 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
   // Fetch stations & teams
   const loadInitialData = async () => {
     try {
-      const [stRes, tmRes] = await Promise.all([
-        fetch('/api/stations'),
-        fetch('/api/teams')
+      const [fetchedStations, fetchedTeams] = await Promise.all([
+        getStations(),
+        getTeams()
       ]);
 
-      if (stRes.ok) {
-        const stData = await stRes.json();
-        if (stData.success) setStations(stData.stations);
-      }
-
-      if (tmRes.ok) {
-        const tmData = await tmRes.json();
-        if (tmData.success) {
-          setTeams(tmData.teams);
-          if (tmData.teams.length >= 2) {
-            setTeamAId(String(tmData.teams[0].id));
-            setTeamBId(String(tmData.teams[1].id));
-          }
+      if (fetchedStations) setStations(fetchedStations);
+      if (fetchedTeams && fetchedTeams.length > 0) {
+        setTeams(fetchedTeams);
+        setTeamAId(String(fetchedTeams[0].id));
+        if (fetchedTeams.length >= 2) {
+          setTeamBId(String(fetchedTeams[1].id));
+        } else {
+          setTeamBId('');
         }
       }
     } catch (err) {
@@ -74,13 +70,8 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
   // Fetch recent matches for this specific station
   const loadStationMatches = async () => {
     try {
-      const res = await fetch(`/api/matches?stationId=${stationId}&limit=10`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setRecentStationMatches(data.matches);
-        }
-      }
+      const matches = await getMatches(stationId, 10);
+      setRecentStationMatches(matches);
     } catch (err) {
       console.error('Failed to load station matches:', err);
     }
@@ -148,22 +139,12 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
         notes,
       };
 
-      const res = await fetch('/api/score', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setSuccessMessage('Match result recorded!');
-        setScoreA(0);
-        setScoreB(0);
-        setNotes('');
-        loadStationMatches();
-      } else {
-        setErrorMessage(data.error || 'Failed to submit match score');
-      }
+      await submitScore(payload);
+      setSuccessMessage('Match result recorded!');
+      setScoreA(0);
+      setScoreB(0);
+      setNotes('');
+      loadStationMatches();
     } catch (err: any) {
       setErrorMessage(err.message || 'Error submitting score');
     } finally {
@@ -174,11 +155,9 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
   const handleDeleteMatch = async (matchId: number) => {
     if (!confirm('Are you sure you want to delete this score entry?')) return;
     try {
-      const res = await fetch(`/api/matches/${matchId}`, { method: 'DELETE' });
-      if (res.ok) {
-        setSuccessMessage('Score entry deleted.');
-        loadStationMatches();
-      }
+      await deleteMatch(matchId);
+      setSuccessMessage('Score entry deleted.');
+      loadStationMatches();
     } catch (err) {
       console.error('Delete failed:', err);
     }

@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Team } from '../types';
-import { Settings, Save, RotateCcw, Shield, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Settings, Save, RotateCcw, Shield, CheckCircle2, AlertTriangle, RefreshCw, Plus, Trash2, ListRestart } from 'lucide-react';
+import { getTeams, saveTeams, resetScores, DEFAULT_TEAMS } from '../services/api';
 
 interface TournamentSetupProps {
   onNavigate: (path: string) => void;
 }
 
 export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) => {
-  const [teams, setTeams] = useState<string[]>(Array(8).fill(''));
-  const [teamIds, setTeamIds] = useState<number[]>([]);
+  const [teams, setTeams] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isResetting, setIsResetting] = useState<boolean>(false);
@@ -16,31 +16,25 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const loadTeams = async () => {
+  const loadTeamsData = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/teams');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.teams)) {
-          const names = data.teams.map((t: Team) => t.name);
-          const ids = data.teams.map((t: Team) => t.id);
-          while (names.length < 8) {
-            names.push(`Team ${names.length + 1}`);
-          }
-          setTeams(names);
-          setTeamIds(ids);
-        }
+      const fetched = await getTeams();
+      if (fetched && fetched.length > 0) {
+        setTeams(fetched.map((t: Team) => t.name));
+      } else {
+        setTeams(DEFAULT_TEAMS.map(t => t.name));
       }
     } catch (err) {
       console.error('Failed to load teams:', err);
+      setTeams(DEFAULT_TEAMS.map(t => t.name));
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadTeams();
+    loadTeamsData();
   }, []);
 
   const handleTeamChange = (index: number, value: string) => {
@@ -49,31 +43,39 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
     setTeams(updated);
   };
 
+  const handleAddTeam = () => {
+    setTeams([...teams, `Team ${teams.length + 1}`]);
+  };
+
+  const handleRemoveTeam = (index: number) => {
+    if (teams.length <= 1) {
+      setMessage({ type: 'error', text: 'Tournament must have at least 1 team' });
+      return;
+    }
+    const updated = teams.filter((_, idx) => idx !== index);
+    setTeams(updated);
+  };
+
+  const handleRestoreDefaults = () => {
+    setTeams(DEFAULT_TEAMS.map(t => t.name));
+    setMessage({ type: 'success', text: 'Restored default NCSS CG 8 teams to input fields. Click Save to apply.' });
+  };
+
   const handleSaveTeams = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
 
     const validTeams = teams.map(t => t.trim()).filter(Boolean);
     if (validTeams.length === 0) {
-      setMessage({ type: 'error', text: 'Team names cannot be empty' });
+      setMessage({ type: 'error', text: 'Please fill in at least one team name' });
       return;
     }
 
     setIsSaving(true);
     try {
-      const res = await fetch('/api/teams', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teams: validTeams }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setMessage({ type: 'success', text: 'Tournament team names updated successfully!' });
-        loadTeams();
-      } else {
-        setMessage({ type: 'error', text: data.error || 'Failed to save team names' });
-      }
+      const updated = await saveTeams(validTeams);
+      setTeams(updated.map((t: Team) => t.name));
+      setMessage({ type: 'success', text: `Saved ${updated.length} team names successfully!` });
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Error saving team names' });
     } finally {
@@ -85,14 +87,9 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
     setIsResetting(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/reset', { method: 'POST' });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setMessage({ type: 'success', text: 'Tournament scores reset! Team names preserved.' });
-        setShowResetConfirm(false);
-      } else {
-        setMessage({ type: 'error', text: data.error || 'Failed to reset scores' });
-      }
+      await resetScores();
+      setMessage({ type: 'success', text: 'Tournament scores reset! Team names preserved.' });
+      setShowResetConfirm(false);
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Error resetting scores' });
     } finally {
@@ -115,7 +112,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
                 NCSS CG Tournament Setup
               </h1>
               <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mt-0.5">
-                Configure 8 Roster Teams • Reset Database Scores
+                Configure Team Roster ({teams.length} Teams) • Manage Scores
               </p>
             </div>
           </div>
@@ -148,12 +145,25 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
 
         {/* Teams Form */}
         <form onSubmit={handleSaveTeams} className="bg-zinc-950 border border-zinc-800 p-6 sm:p-8 rounded-lg shadow-2xl space-y-6">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
-            <h2 className="text-xl font-black italic tracking-tighter uppercase text-white flex items-center gap-2">
-              <Shield className="w-5 h-5 text-yellow-400" />
-              Manage Tournament Roster
-            </h2>
-            <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">SQLite Database</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+            <div>
+              <h2 className="text-xl font-black italic tracking-tighter uppercase text-white flex items-center gap-2">
+                <Shield className="w-5 h-5 text-yellow-400" />
+                Manage Tournament Roster
+              </h2>
+              <p className="text-xs font-mono text-zinc-500 uppercase tracking-wider mt-0.5">
+                Dynamic Roster • Pre-Populated Default 8 Teams
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRestoreDefaults}
+              className="px-3 py-1.5 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-yellow-400 text-xs font-mono font-bold uppercase rounded flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+            >
+              <ListRestart className="w-3.5 h-3.5" />
+              <span>Reset Default 8 Teams</span>
+            </button>
           </div>
 
           {isLoading ? (
@@ -162,22 +172,48 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
               LOADING TEAMS...
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {teams.map((name, idx) => (
-                <div key={idx} className="space-y-1">
-                  <label className="block text-[11px] font-mono font-bold text-zinc-500 uppercase tracking-widest">
-                    Team 0{idx + 1}
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={e => handleTeamChange(idx, e.target.value)}
-                    required
-                    placeholder={`e.g. Team ${idx + 1}`}
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded px-4 py-2.5 text-white font-extrabold uppercase focus:outline-none focus:border-yellow-400 text-sm"
-                  />
-                </div>
-              ))}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {teams.map((name, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] font-mono font-bold text-zinc-500 uppercase tracking-widest">
+                        Team {idx < 9 ? `0${idx + 1}` : idx + 1}
+                      </label>
+                      {teams.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTeam(idx)}
+                          className="text-[10px] text-zinc-500 hover:text-red-400 flex items-center gap-1 font-mono uppercase cursor-pointer"
+                          title="Remove team"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={e => handleTeamChange(idx, e.target.value)}
+                      required
+                      placeholder={`Team Name ${idx + 1}`}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-4 py-2.5 text-white font-extrabold uppercase focus:outline-none focus:border-yellow-400 text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleAddTeam}
+                  className="w-full py-2.5 border border-dashed border-zinc-800 hover:border-yellow-400/50 bg-zinc-900/50 hover:bg-zinc-900 text-zinc-400 hover:text-yellow-400 font-mono text-xs font-bold uppercase tracking-wider rounded transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Another Team Field</span>
+                </button>
+              </div>
             </div>
           )}
 
@@ -226,6 +262,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
               </p>
               <div className="flex items-center gap-3">
                 <button
+                  type="button"
                   onClick={handleResetTournament}
                   disabled={isResetting}
                   className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-wider text-xs rounded transition-colors flex items-center gap-2 cursor-pointer"
@@ -234,6 +271,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => setShowResetConfirm(false)}
                   className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold uppercase tracking-wider text-xs rounded transition-colors cursor-pointer"
                 >

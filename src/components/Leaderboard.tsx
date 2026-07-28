@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { LeaderboardEntry, MatchResult } from '../types';
-import { Trophy, RefreshCw, Flame, Radio, Sparkles, Gamepad2 } from 'lucide-react';
+import { Trophy, RefreshCw, Flame, Gamepad2, Sparkles } from 'lucide-react';
+import { getLeaderboard, getMatches } from '../services/api';
 
 export const Leaderboard: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -13,24 +14,17 @@ export const Leaderboard: React.FC = () => {
   const fetchData = async () => {
     setIsSyncing(true);
     try {
-      const [lbRes, matchRes] = await Promise.all([
-        fetch('/api/leaderboard'),
-        fetch('/api/matches?limit=10')
+      const [lbData, matches] = await Promise.all([
+        getLeaderboard(),
+        getMatches(undefined, 10)
       ]);
 
-      if (lbRes.ok) {
-        const lbData = await lbRes.json();
-        if (lbData.success) {
-          setLeaderboard(lbData.leaderboard);
-          setLastUpdated(lbData.lastUpdated);
-        }
+      if (lbData) {
+        setLeaderboard(lbData.leaderboard);
+        setLastUpdated(lbData.lastUpdated);
       }
-
-      if (matchRes.ok) {
-        const mData = await matchRes.json();
-        if (mData.success) {
-          setRecentMatches(mData.matches);
-        }
+      if (matches) {
+        setRecentMatches(matches);
       }
     } catch (err) {
       console.error('Error polling leaderboard:', err);
@@ -87,7 +81,7 @@ export const Leaderboard: React.FC = () => {
     <div className="min-h-screen bg-[#0A0A0A] text-white p-4 sm:p-6 lg:p-8 font-sans selection:bg-yellow-400 selection:text-black">
       <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* Hero Header with Extra Large Bold Typography */}
+        {/* Hero Header */}
         <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 border-b border-zinc-800 pb-6">
           <div>
             <div className="flex items-center gap-3 mb-1">
