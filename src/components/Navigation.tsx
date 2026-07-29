@@ -1,12 +1,13 @@
 import React from 'react';
-import { Trophy, Gamepad2, Settings, Tv, Dices, Target, Flame, Activity } from 'lucide-react';
+import { Trophy, Gamepad2, Settings, Tv, Dices, Target, Flame, Activity, Lock } from 'lucide-react';
 
 interface NavigationProps {
   currentPath: string;
   onNavigate: (path: string) => void;
+  onLock?: () => void;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ currentPath, onNavigate }) => {
+export const Navigation: React.FC<NavigationProps> = ({ currentPath, onNavigate, onLock }) => {
   const stations = [
     { id: 'foosball', label: 'Foosball', icon: Dices },
     { id: 'pool', label: 'Pool Table', icon: Target },
@@ -85,7 +86,19 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPath, onNavigate 
               <Settings className="w-4 h-4" />
               <span>Setup</span>
             </button>
+
+            {onLock && (
+              <button
+                onClick={onLock}
+                title="Lock Application"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-zinc-500 hover:text-red-400 hover:bg-red-500/10 border border-zinc-800 hover:border-red-500/30 rounded transition-all cursor-pointer"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Lock</span>
+              </button>
+            )}
           </nav>
+
         </div>
 
         {/* Station Sub-Navigation Bar */}
