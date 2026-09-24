@@ -379,9 +379,14 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
           {!isArcadeMode ? (
             <div className="space-y-3">
               <label className="block text-xs font-mono font-bold text-zinc-400 uppercase tracking-widest">
-                Match Result (Win = 3 PTS, Draw = 1 PT)
+                {stationId === 'foosball' ? 'Station Result' : 'Match Result (Win = 3 PTS, Draw = 1 PT)'}
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              {stationId === 'foosball' && (
+                <p className="text-xs font-mono text-zinc-500">
+                  After all 3 rounds, select only Win or Lose. Foosball is best of 3, so there should be no draw.
+                </p>
+              )}
+              <div className={`grid gap-3 ${stationId === 'foosball' ? 'grid-cols-2' : 'grid-cols-3'}`}>
                 <button
                   type="button"
                   onClick={() => setOutcome('a_win')}
@@ -397,18 +402,20 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                   <div className="text-[10px] font-mono tracking-widest mt-1">WIN (3 PTS)</div>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setOutcome('draw')}
-                  className={`p-4 rounded border text-center transition-all cursor-pointer font-black uppercase ${
-                    outcome === 'draw'
-                      ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-500/10'
-                      : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
-                  }`}
-                >
-                  <div className="text-base">DRAW</div>
-                  <div className="text-[10px] font-mono tracking-widest mt-1">1 PT EACH</div>
-                </button>
+                {stationId !== 'foosball' && (
+                  <button
+                    type="button"
+                    onClick={() => setOutcome('draw')}
+                    className={`p-4 rounded border text-center transition-all cursor-pointer font-black uppercase ${
+                      outcome === 'draw'
+                        ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-500/10'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                    }`}
+                  >
+                    <div className="text-base">DRAW</div>
+                    <div className="text-[10px] font-mono tracking-widest mt-1">1 PT EACH</div>
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -461,6 +468,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
           )}
 
           {/* Tiebreaker Arcade Challenge score entry */}
+          {isArcadeMode && (
           <div className="bg-zinc-900/80 border border-zinc-800 p-4 rounded space-y-3">
             <div className="flex items-center gap-2 text-xs font-mono font-bold text-yellow-400 uppercase tracking-widest">
               <Sparkles className="w-4 h-4 text-yellow-400" />
@@ -501,6 +509,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
               )}
             </div>
           </div>
+          )}
 
           {/* Optional Notes */}
           <div className="space-y-2">
