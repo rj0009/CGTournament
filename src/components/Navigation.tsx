@@ -13,7 +13,6 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPath, onNavigate,
     { id: 'pool', label: 'Pool Table', icon: Target },
     { id: 'darts', label: 'Darts', icon: Flame },
     { id: 'basketball', label: 'Basketball', icon: Activity },
-    { id: 'soccer', label: 'Soccer', icon: Gamepad2 },
   ];
 
   const isStationActive = currentPath.startsWith('/station');

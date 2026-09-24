@@ -73,7 +73,6 @@ const DEFAULT_STATIONS: Station[] = [
   { id: 'pool', name: 'Pool Table', type: 'match' },
   { id: 'darts', name: 'Darts', type: 'match' },
   { id: 'basketball', name: 'Basketball Machine', type: 'arcade' },
-  { id: 'soccer', name: 'Soccer Machine', type: 'match' },
 ];
 
 let cachedData: DbSchema | null = null;
