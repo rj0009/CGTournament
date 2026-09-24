@@ -8,7 +8,7 @@ interface TournamentSetupProps {
 }
 
 export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) => {
-  const [teams, setTeams] = useState<string[]>([]);
+  const [teams, setTeams] = useState<{ name: string; lead: string }[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isResetting, setIsResetting] = useState<boolean>(false);
@@ -21,13 +21,13 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
     try {
       const fetched = await getTeams();
       if (fetched && fetched.length > 0) {
-        setTeams(fetched.map((t: Team) => t.name));
+        setTeams(fetched.map((t: Team) => ({ name: t.name, lead: t.lead || '' })));
       } else {
-        setTeams(DEFAULT_TEAMS.map(t => t.name));
+        setTeams(DEFAULT_TEAMS.map(t => ({ name: t.name, lead: '' })));
       }
     } catch (err) {
       console.error('Failed to load teams:', err);
-      setTeams(DEFAULT_TEAMS.map(t => t.name));
+      setTeams(DEFAULT_TEAMS.map(t => ({ name: t.name, lead: '' })));
     } finally {
       setIsLoading(false);
     }
@@ -39,12 +39,18 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
 
   const handleTeamChange = (index: number, value: string) => {
     const updated = [...teams];
-    updated[index] = value;
+    updated[index] = { ...updated[index], name: value };
+    setTeams(updated);
+  };
+
+  const handleLeadChange = (index: number, value: string) => {
+    const updated = [...teams];
+    updated[index] = { ...updated[index], lead: value };
     setTeams(updated);
   };
 
   const handleAddTeam = () => {
-    setTeams([...teams, `Team ${teams.length + 1}`]);
+    setTeams([...teams, { name: `Team ${teams.length + 1}`, lead: '' }]);
   };
 
   const handleRemoveTeam = (index: number) => {
@@ -57,7 +63,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
   };
 
   const handleRestoreDefaults = () => {
-    setTeams(DEFAULT_TEAMS.map(t => t.name));
+    setTeams(DEFAULT_TEAMS.map(t => ({ name: t.name, lead: '' })));
     setMessage({ type: 'success', text: 'Restored default NCSS CG 8 teams to input fields. Click Save to apply.' });
   };
 
@@ -65,7 +71,9 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
     e.preventDefault();
     setMessage(null);
 
-    const validTeams = teams.map(t => t.trim()).filter(Boolean);
+    const validTeams = teams
+      .map(t => ({ name: t.name.trim(), lead: t.lead.trim() }))
+      .filter(t => t.name);
     if (validTeams.length === 0) {
       setMessage({ type: 'error', text: 'Please fill in at least one team name' });
       return;
@@ -74,7 +82,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
     setIsSaving(true);
     try {
       const updated = await saveTeams(validTeams);
-      setTeams(updated.map((t: Team) => t.name));
+      setTeams(updated.map((t: Team) => ({ name: t.name, lead: t.lead || '' })));
       setMessage({ type: 'success', text: `Saved ${updated.length} team names successfully!` });
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Error saving team names' });
@@ -199,6 +207,13 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
                       required
                       placeholder={`Team Name ${idx + 1}`}
                       className="w-full bg-zinc-900 border border-zinc-800 rounded px-4 py-2.5 text-white font-extrabold uppercase focus:outline-none focus:border-yellow-400 text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={teams[idx].lead}
+                      onChange={e => handleLeadChange(idx, e.target.value)}
+                      placeholder="Team Lead Name (optional)"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-4 py-2 text-white text-sm font-mono focus:outline-none focus:border-yellow-400"
                     />
                   </div>
                 ))}

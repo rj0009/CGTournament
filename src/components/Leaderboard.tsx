@@ -134,9 +134,10 @@ export const Leaderboard: React.FC = () => {
               {/* Table Header */}
               <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs uppercase font-black tracking-[0.15em] text-zinc-500 border-b border-zinc-800 bg-zinc-900/60">
                 <div className="col-span-2 sm:col-span-1">Rank</div>
-                <div className="col-span-5 sm:col-span-5">Team Identity</div>
+                <div className="col-span-4 sm:col-span-4">Team Identity</div>
                 <div className="col-span-1 text-center font-mono">GP</div>
                 <div className="col-span-2 sm:col-span-3 text-center font-mono">W / D / L</div>
+                <div className="col-span-1 text-center font-mono">BB</div>
                 <div className="col-span-2 text-right">Points</div>
               </div>
 
@@ -163,7 +164,7 @@ export const Leaderboard: React.FC = () => {
                       </div>
 
                       {/* Team Name */}
-                      <div className="col-span-5 sm:col-span-5">
+                      <div className="col-span-4 sm:col-span-4">
                         <div className="text-lg sm:text-2xl font-extrabold tracking-tight uppercase text-white flex items-center gap-2">
                           {team.rank === 1 && (
                             <Trophy className="w-5 h-5 text-yellow-400 shrink-0 inline" />
@@ -171,7 +172,7 @@ export const Leaderboard: React.FC = () => {
                           <span className="truncate">[Team {team.id}] {team.name}</span>
                         </div>
                         <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mt-0.5">
-                          Tiebreaker: {team.arcade_score.toLocaleString()} PTS
+                          Tiebreak: Head-to-Head → BB
                         </div>
                       </div>
 
@@ -183,6 +184,11 @@ export const Leaderboard: React.FC = () => {
                       {/* W / D / L */}
                       <div className="col-span-2 sm:col-span-3 text-center font-mono text-xs sm:text-lg text-zinc-400 font-bold">
                         <span className="text-emerald-400">{team.wins}</span> / <span className="text-yellow-400">{team.draws}</span> / <span className="text-rose-400">{team.losses}</span>
+                      </div>
+
+                      {/* Best Basketball Run */}
+                      <div className="col-span-1 text-center font-mono text-base sm:text-xl font-bold text-sky-300" title="Best basketball machine run">
+                        {team.bb_score || 0}
                       </div>
 
                       {/* Total Points */}
@@ -204,7 +210,7 @@ export const Leaderboard: React.FC = () => {
             {/* Rules Banner */}
             <div className="p-4 border border-zinc-800/80 bg-zinc-950 rounded-lg text-xs font-mono text-zinc-500 flex flex-wrap items-center justify-between gap-2 uppercase tracking-wider">
               <span>Standard Win: 3 PTS • Draw: 1 PT • Loss: 0 PTS</span>
-              <span>Tiebreaker: Arcade Challenge Points</span>
+              <span>Tiebreaker: Head-to-Head → Best BB Run</span>
             </div>
           </div>
 
@@ -293,7 +299,7 @@ export const Leaderboard: React.FC = () => {
                 Arcade Challenge Tiebreaker
               </div>
               <div className="text-xs text-zinc-400">
-                High scores entered at Arcade stations break ties for top ranks!
+                Best basketball machine run breaks ties when head-to-head can't!
               </div>
             </div>
 

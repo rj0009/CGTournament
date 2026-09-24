@@ -92,14 +92,16 @@ export async function getTeams(): Promise<Team[]> {
   return getLocalTeams();
 }
 
-export async function saveTeams(names: string[]): Promise<Team[]> {
-  const validNames = names.map(n => n.trim()).filter(Boolean);
-  if (validNames.length === 0) throw new Error('At least one team name is required');
+export async function saveTeams(names: (string | { name: string; lead?: string })[]): Promise<Team[]> {
+  const items = names
+    .map(n => (typeof n === 'string' ? { name: n.trim(), lead: '' } : { name: (n.name || '').trim(), lead: (n.lead || '').trim() }))
+    .filter(n => n.name.length > 0);
+  if (items.length === 0) throw new Error('At least one team name is required');
 
   const data = await safeFetch<{ success: boolean; teams: Team[]; error?: string }>('/api/teams', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ teams: validNames }),
+    body: JSON.stringify({ teams: items }),
   });
 
   if (data?.success && Array.isArray(data.teams)) {
@@ -108,9 +110,10 @@ export async function saveTeams(names: string[]): Promise<Team[]> {
   }
 
   // Local fallback
-  const newTeams: Team[] = validNames.map((name, index) => ({
+  const newTeams: Team[] = items.map((t, index) => ({
     id: index + 1,
-    name,
+    name: t.name,
+    lead: t.lead,
   }));
   saveLocalTeams(newTeams);
   return newTeams;

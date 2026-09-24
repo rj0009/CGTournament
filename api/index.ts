@@ -1,22 +1,24 @@
 import express from 'express';
-import {
-  getAllTeams,
-  updateTeamsList,
-  getAllStations,
-  submitMatchResult,
-  getLeaderboard,
-  getRecentMatches,
-  deleteMatchResult,
-  resetTournamentScores,
-} from '../src/db';
+
+// Ponteng Work API — all routes proxy to the Jarvis Base44 backend (cgTournament)
+// which is the persistent single source of truth for teams + matches.
+const BACKEND = 'https://jarvis-4ab907e4.base44.app/functions/cgTournament';
+
+async function call(payload: Record<string, unknown>) {
+  const r = await fetch(BACKEND, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return r.json();
+}
 
 const app = express();
 app.use(express.json());
 
-app.get('/api/teams', async (req, res) => {
+app.get('/api/teams', async (_req, res) => {
   try {
-    const teams = await getAllTeams();
-    res.json({ success: true, teams });
+    res.json(await call({ action: 'teams_get' }));
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -28,17 +30,15 @@ app.post('/api/teams', async (req, res) => {
     if (!Array.isArray(teams)) {
       return res.status(400).json({ success: false, error: 'Expected teams array' });
     }
-    const updated = await updateTeamsList(teams);
-    res.json({ success: true, teams: updated });
+    res.json(await call({ action: 'teams_save', teams }));
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-app.get('/api/stations', async (req, res) => {
+app.get('/api/stations', async (_req, res) => {
   try {
-    const stations = await getAllStations();
-    res.json({ success: true, stations });
+    res.json(await call({ action: 'stations' }));
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -46,46 +46,32 @@ app.get('/api/stations', async (req, res) => {
 
 app.post('/api/score', async (req, res) => {
   try {
-    const {
-      station_id,
-      team_a_id,
-      team_b_id,
-      winner_id,
-      is_draw,
-      score_a,
-      score_b,
-      notes,
-    } = req.body;
-
-    if (!station_id || !team_a_id) {
+    const body = req.body || {};
+    if (!body.station_id || !body.team_a_id) {
       return res.status(400).json({ success: false, error: 'station_id and team_a_id are required' });
     }
-
-    const matchId = await submitMatchResult({
-      station_id,
-      team_a_id: Number(team_a_id),
-      team_b_id: team_b_id ? Number(team_b_id) : null,
-      winner_id: winner_id ? Number(winner_id) : null,
-      is_draw: Boolean(is_draw),
-      score_a: Number(score_a) || 0,
-      score_b: Number(score_b) || 0,
-      notes: notes || '',
+    const result = await call({
+      action: 'score_add',
+      match: {
+        station_id: body.station_id,
+        team_a_id: Number(body.team_a_id),
+        team_b_id: body.team_b_id ? Number(body.team_b_id) : 0,
+        winner_id: body.winner_id ? Number(body.winner_id) : 0,
+        is_draw: Boolean(body.is_draw),
+        score_a: Number(body.score_a) || 0,
+        score_b: Number(body.score_b) || 0,
+        notes: body.notes || '',
+      },
     });
-
-    res.json({ success: true, matchId });
+    res.json({ success: result?.success === true, matchId: result?.id });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-app.get('/api/leaderboard', async (req, res) => {
+app.get('/api/leaderboard', async (_req, res) => {
   try {
-    const leaderboard = await getLeaderboard();
-    res.json({
-      success: true,
-      leaderboard,
-      lastUpdated: new Date().toISOString(),
-    });
+    res.json(await call({ action: 'leaderboard' }));
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -93,10 +79,11 @@ app.get('/api/leaderboard', async (req, res) => {
 
 app.get('/api/matches', async (req, res) => {
   try {
-    const stationId = req.query.stationId ? String(req.query.stationId) : undefined;
-    const limit = req.query.limit ? Number(req.query.limit) : 25;
-    const matches = await getRecentMatches(limit, stationId);
-    res.json({ success: true, matches });
+    res.json(await call({
+      action: 'matches_get',
+      stationId: req.query.stationId ? String(req.query.stationId) : '',
+      limit: req.query.limit ? Number(req.query.limit) : 25,
+    }));
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -104,19 +91,15 @@ app.get('/api/matches', async (req, res) => {
 
 app.delete('/api/matches/:id', async (req, res) => {
   try {
-    const id = Number(req.params.id);
-    if (!id) return res.status(400).json({ success: false, error: 'Invalid ID' });
-    await deleteMatchResult(id);
-    res.json({ success: true });
+    res.json(await call({ action: 'match_delete', id: String(req.params.id) }));
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-app.post('/api/reset', async (req, res) => {
+app.post('/api/reset', async (_req, res) => {
   try {
-    await resetTournamentScores();
-    res.json({ success: true, message: 'Tournament scores reset successfully' });
+    res.json(await call({ action: 'reset' }));
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

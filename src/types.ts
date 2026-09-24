@@ -1,6 +1,7 @@
 export interface Team {
   id: number;
   name: string;
+  lead?: string;
 }
 
 export interface Station {
@@ -29,6 +30,8 @@ export interface MatchResult {
 export interface LeaderboardEntry {
   id: number;
   name: string;
+  lead?: string;
+  bb_score?: number;
   played: number;
   wins: number;
   draws: number;
