@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Station, Team, MatchResult } from '../types';
-import { Gamepad2, CheckCircle2, Trash2, Trophy, Dices, Target, Flame, Activity, Sparkles, Send, RefreshCw } from 'lucide-react';
+import { Gamepad2, CheckCircle2, Trash2, Trophy, Dices, Target, Flame, Activity, Sparkles, Send, RefreshCw, Timer, Play, Pause, RotateCcw } from 'lucide-react';
 import { getStations, getTeams, getMatches, submitScore, deleteMatch } from '../services/api';
 
 interface StationMasterProps {
@@ -24,6 +24,9 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [roundSeconds, setRoundSeconds] = useState(180);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [roundNumber, setRoundNumber] = useState(1);
 
   const currentStation = stations.find(s => s.id === stationId) || {
     id: stationId,
@@ -86,6 +89,35 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
     setSuccessMessage(null);
     setErrorMessage(null);
   }, [stationId]);
+
+  useEffect(() => {
+    if (!isTimerRunning) return;
+
+    const timer = window.setInterval(() => {
+      setRoundSeconds(seconds => {
+        if (seconds <= 1) {
+          setIsTimerRunning(false);
+          return 0;
+        }
+        return seconds - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [isTimerRunning]);
+
+  const resetRoundTimer = () => {
+    setIsTimerRunning(false);
+    setRoundSeconds(180);
+  };
+
+  const advanceRound = () => {
+    setIsTimerRunning(false);
+    setRoundNumber(round => Math.min(3, round + 1));
+    setRoundSeconds(180);
+  };
+
+  const formattedRoundTime = `${Math.floor(roundSeconds / 60)}:${String(roundSeconds % 60).padStart(2, '0')}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,6 +258,57 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
           </div>
         </div>
 
+        {stationId === 'foosball' && (
+          <section className="bg-zinc-950 border border-yellow-400/30 p-5 rounded-lg shadow-xl" aria-labelledby="foosball-rules-heading">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-yellow-400">
+                  <Timer className="w-5 h-5" />
+                  <h2 id="foosball-rules-heading" className="text-sm font-black uppercase tracking-widest">Foosball Station Rules</h2>
+                </div>
+                <p className="mt-2 text-xs font-mono text-zinc-400 uppercase tracking-wide">
+                  3 rounds total · Best of 3 matches wins the station · 3 minutes per round
+                </p>
+                <p className="mt-2 text-xs font-mono text-zinc-500">Round {roundNumber} of 3</p>
+              </div>
+
+              <div className="flex items-center gap-2 sm:flex-col sm:items-end">
+                <div className={`font-mono text-4xl font-black tabular-nums ${roundSeconds === 0 ? 'text-red-400' : 'text-white'}`} aria-live="polite">
+                  {formattedRoundTime}
+                </div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-500">Round stopwatch</span>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setIsTimerRunning(running => !running)}
+                disabled={roundSeconds === 0}
+                className="inline-flex items-center gap-2 rounded bg-yellow-400 px-4 py-2 text-xs font-black uppercase tracking-wider text-black transition-colors hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isTimerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                {isTimerRunning ? 'Pause' : 'Start'}
+              </button>
+              <button
+                type="button"
+                onClick={resetRoundTimer}
+                className="inline-flex items-center gap-2 rounded border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-black uppercase tracking-wider text-zinc-200 transition-colors hover:border-zinc-500"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reset round
+              </button>
+              <button
+                type="button"
+                onClick={advanceRound}
+                disabled={roundNumber === 3}
+                className="rounded border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-black uppercase tracking-wider text-zinc-200 transition-colors hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next round
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* Notifications */}
         {successMessage && (
           <div className="p-4 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center gap-3 font-mono text-xs font-bold uppercase tracking-wider">
@@ -266,7 +349,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
               >
                 {teams.map(t => (
                   <option key={t.id} value={t.id} disabled={String(t.id) === teamBId}>
-                    {t.name}
+                    [Team {t.id}] {t.name}
                   </option>
                 ))}
               </select>
@@ -285,7 +368,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                 {isArcadeMode && <option value="">None (Solo Score)</option>}
                 {teams.map(t => (
                   <option key={t.id} value={t.id} disabled={String(t.id) === teamAId}>
-                    {t.name}
+                    [Team {t.id}] {t.name}
                   </option>
                 ))}
               </select>
