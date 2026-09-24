@@ -1,0 +1,65 @@
+{
+  "teams": [
+    {
+      "id": 1,
+      "name": "Red Dragons"
+    },
+    {
+      "id": 2,
+      "name": "Blue Falcons"
+    },
+    {
+      "id": 3,
+      "name": "Golden Eagles"
+    },
+    {
+      "id": 4,
+      "name": "Silver Panthers"
+    },
+    {
+      "id": 5,
+      "name": "Green Vipers"
+    },
+    {
+      "id": 6,
+      "name": "Purple Storm"
+    },
+    {
+      "id": 7,
+      "name": "White Tigers"
+    },
+    {
+      "id": 8,
+      "name": "Black Mambas"
+    }
+  ],
+  "stations": [
+    {
+      "id": "foosball",
+      "name": "Foosball",
+      "type": "match"
+    },
+    {
+      "id": "pool",
+      "name": "Pool Table",
+      "type": "match"
+    },
+    {
+      "id": "darts",
+      "name": "Darts",
+      "type": "match"
+    },
+    {
+      "id": "basketball",
+      "name": "Basketball Machine",
+      "type": "arcade"
+    },
+    {
+      "id": "soccer",
+      "name": "Soccer Machine",
+      "type": "match"
+    }
+  ],
+  "match_results": [],
+  "next_match_id": 1
+}
