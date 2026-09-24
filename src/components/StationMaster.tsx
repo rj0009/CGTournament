@@ -24,7 +24,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const timerDuration = stationId === 'pool' ? 600 : 180;
+  const timerDuration = stationId === 'pool' ? 720 : 180;
   const hasStationTimer = stationId === 'foosball' || stationId === 'pool';
   const [roundSeconds, setRoundSeconds] = useState(timerDuration);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -269,7 +269,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                   <h2 id="station-timer-heading" className="text-sm font-black uppercase tracking-widest">{stationId === 'pool' ? 'Pool Table Station Timer' : 'Foosball Station Rules'}</h2>
                 </div>
                 <p className="mt-2 text-xs font-mono text-zinc-400 uppercase tracking-wide">
-                  {stationId === 'pool' ? '10 minute station timer' : '3 rounds total · Best of 3 matches wins the station · 3 minutes per round'}
+                  {stationId === 'pool' ? '12 minute station timer' : '3 rounds total · Best of 3 matches wins the station · 3 minutes per round'}
                 </p>
                 {stationId === 'foosball' && <p className="mt-2 text-xs font-mono text-zinc-500">Round {roundNumber} of 3</p>}
               </div>
