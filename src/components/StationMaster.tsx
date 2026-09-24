@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Station, Team, MatchResult } from '../types';
-import { Gamepad2, CheckCircle2, Trash2, Trophy, Dices, Target, Flame, Activity, Sparkles, Send, RefreshCw } from 'lucide-react';
+import { Gamepad2, CheckCircle2, Trash2, Trophy, Dices, Target, Flame, Activity, Sparkles, Send, RefreshCw, Timer, Play, Pause, RotateCcw } from 'lucide-react';
 import { getStations, getTeams, getMatches, submitScore, deleteMatch } from '../services/api';
 
 interface StationMasterProps {
@@ -19,11 +19,20 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
   const [outcome, setOutcome] = useState<'a_win' | 'draw' | 'b_win'>('a_win');
   const [scoreA, setScoreA] = useState<number>(0);
   const [scoreB, setScoreB] = useState<number>(0);
+  const [basketballRound1A, setBasketballRound1A] = useState<number>(0);
+  const [basketballRound1B, setBasketballRound1B] = useState<number>(0);
+  const [basketballRound2A, setBasketballRound2A] = useState<number>(0);
+  const [basketballRound2B, setBasketballRound2B] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const timerDuration = stationId === 'pool' || stationId === 'darts' ? 720 : 180;
+  const hasStationTimer = stationId === 'foosball' || stationId === 'pool' || stationId === 'darts';
+  const [roundSeconds, setRoundSeconds] = useState(timerDuration);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [roundNumber, setRoundNumber] = useState(1);
 
   const currentStation = stations.find(s => s.id === stationId) || {
     id: stationId,
@@ -87,6 +96,35 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
     setErrorMessage(null);
   }, [stationId]);
 
+  useEffect(() => {
+    if (!isTimerRunning) return;
+
+    const timer = window.setInterval(() => {
+      setRoundSeconds(seconds => {
+        if (seconds <= 1) {
+          setIsTimerRunning(false);
+          return 0;
+        }
+        return seconds - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [isTimerRunning]);
+
+  const resetRoundTimer = () => {
+    setIsTimerRunning(false);
+    setRoundSeconds(timerDuration);
+  };
+
+  const advanceRound = () => {
+    setIsTimerRunning(false);
+    setRoundNumber(round => Math.min(3, round + 1));
+    setRoundSeconds(timerDuration);
+  };
+
+  const formattedRoundTime = `${Math.floor(roundSeconds / 60)}:${String(roundSeconds % 60).padStart(2, '0')}`;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSuccessMessage(null);
@@ -107,6 +145,10 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
     setIsSubmitting(true);
 
     try {
+      const basketballTotalA = basketballRound1A + basketballRound2A;
+      const basketballTotalB = basketballRound1B + basketballRound2B;
+      const submittedScoreA = stationId === 'basketball' ? basketballTotalA : scoreA;
+      const submittedScoreB = stationId === 'basketball' ? basketballTotalB : scoreB;
       let winner_id: number | null = null;
       let is_draw = false;
 
@@ -119,9 +161,9 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
           is_draw = true;
         }
       } else {
-        if (Number(scoreA) > Number(scoreB)) {
+        if (submittedScoreA > submittedScoreB) {
           winner_id = Number(teamAId);
-        } else if (Number(scoreB) > Number(scoreA)) {
+        } else if (submittedScoreB > submittedScoreA) {
           winner_id = Number(teamBId);
         } else {
           is_draw = true;
@@ -134,15 +176,21 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
         team_b_id: isArcade && !teamBId ? null : Number(teamBId),
         winner_id,
         is_draw,
-        score_a: Number(scoreA) || 0,
-        score_b: Number(scoreB) || 0,
-        notes,
+        score_a: submittedScoreA,
+        score_b: submittedScoreB,
+        notes: stationId === 'basketball'
+          ? `Round 1: Team A ${basketballRound1A} - Team B ${basketballRound1B}; Round 2: Team A ${basketballRound2A} - Team B ${basketballRound2B}${notes ? `; ${notes}` : ''}`
+          : notes,
       };
 
       await submitScore(payload);
       setSuccessMessage('Match result recorded!');
       setScoreA(0);
       setScoreB(0);
+      setBasketballRound1A(0);
+      setBasketballRound1B(0);
+      setBasketballRound2A(0);
+      setBasketballRound2B(0);
       setNotes('');
       loadStationMatches();
     } catch (err: any) {
@@ -226,6 +274,57 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
           </div>
         </div>
 
+        {hasStationTimer && (
+          <section className="bg-zinc-950 border border-yellow-400/30 p-5 rounded-lg shadow-xl" aria-labelledby="station-timer-heading">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-yellow-400">
+                  <Timer className="w-5 h-5" />
+                  <h2 id="station-timer-heading" className="text-sm font-black uppercase tracking-widest">{stationId === 'pool' ? 'Pool Table Station Timer' : stationId === 'darts' ? 'Darts Station Timer' : 'Foosball Station Rules'}</h2>
+                </div>
+                <p className="mt-2 text-xs font-mono text-zinc-400 uppercase tracking-wide">
+                  {stationId === 'pool' || stationId === 'darts' ? '12 minute station timer' : '3 rounds total · Best of 3 matches wins the station · 3 minutes per round'}
+                </p>
+                {stationId === 'foosball' && <p className="mt-2 text-xs font-mono text-zinc-500">Round {roundNumber} of 3</p>}
+              </div>
+
+              <div className="flex items-center gap-2 sm:flex-col sm:items-end">
+                <div className={`font-mono text-4xl font-black tabular-nums ${roundSeconds === 0 ? 'text-red-400' : 'text-white'}`} aria-live="polite">
+                  {formattedRoundTime}
+                </div>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-500">{stationId === 'pool' || stationId === 'darts' ? 'Station stopwatch' : 'Round stopwatch'}</span>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setIsTimerRunning(running => !running)}
+                disabled={roundSeconds === 0}
+                className="inline-flex items-center gap-2 rounded bg-yellow-400 px-4 py-2 text-xs font-black uppercase tracking-wider text-black transition-colors hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isTimerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                {isTimerRunning ? 'Pause' : 'Start'}
+              </button>
+              <button
+                type="button"
+                onClick={resetRoundTimer}
+                className="inline-flex items-center gap-2 rounded border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-black uppercase tracking-wider text-zinc-200 transition-colors hover:border-zinc-500"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reset round
+              </button>
+              {stationId === 'foosball' && <button
+                type="button"
+                onClick={advanceRound}
+                disabled={roundNumber === 3}
+                className="rounded border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-black uppercase tracking-wider text-zinc-200 transition-colors hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next round
+              </button>}
+            </div>
+          </section>
+        )}
+
         {/* Notifications */}
         {successMessage && (
           <div className="p-4 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center gap-3 font-mono text-xs font-bold uppercase tracking-wider">
@@ -266,7 +365,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
               >
                 {teams.map(t => (
                   <option key={t.id} value={t.id} disabled={String(t.id) === teamBId}>
-                    {t.name}
+                    [Team {t.id}] {t.name}
                   </option>
                 ))}
               </select>
@@ -285,7 +384,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                 {isArcadeMode && <option value="">None (Solo Score)</option>}
                 {teams.map(t => (
                   <option key={t.id} value={t.id} disabled={String(t.id) === teamAId}>
-                    {t.name}
+                    [Team {t.id}] {t.name}
                   </option>
                 ))}
               </select>
@@ -296,9 +395,14 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
           {!isArcadeMode ? (
             <div className="space-y-3">
               <label className="block text-xs font-mono font-bold text-zinc-400 uppercase tracking-widest">
-                Match Result (Win = 3 PTS, Draw = 1 PT)
+                {stationId === 'foosball' ? 'Station Result' : 'Match Result (Win = 3 PTS, Draw = 1 PT)'}
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              {stationId === 'foosball' && (
+                <p className="text-xs font-mono text-zinc-500">
+                  After all 3 rounds, select only Win or Lose. Foosball is best of 3, so there should be no draw.
+                </p>
+              )}
+              <div className={`grid gap-3 ${stationId === 'foosball' ? 'grid-cols-2' : 'grid-cols-3'}`}>
                 <button
                   type="button"
                   onClick={() => setOutcome('a_win')}
@@ -314,18 +418,20 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                   <div className="text-[10px] font-mono tracking-widest mt-1">WIN (3 PTS)</div>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setOutcome('draw')}
-                  className={`p-4 rounded border text-center transition-all cursor-pointer font-black uppercase ${
-                    outcome === 'draw'
-                      ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-500/10'
-                      : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
-                  }`}
-                >
-                  <div className="text-base">DRAW</div>
-                  <div className="text-[10px] font-mono tracking-widest mt-1">1 PT EACH</div>
-                </button>
+                {stationId !== 'foosball' && (
+                  <button
+                    type="button"
+                    onClick={() => setOutcome('draw')}
+                    className={`p-4 rounded border text-center transition-all cursor-pointer font-black uppercase ${
+                      outcome === 'draw'
+                        ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-500/10'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                    }`}
+                  >
+                    <div className="text-base">DRAW</div>
+                    <div className="text-[10px] font-mono tracking-widest mt-1">1 PT EACH</div>
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -377,47 +483,55 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
             </div>
           )}
 
-          {/* Tiebreaker Arcade Challenge score entry */}
+          {/* Arcade score entry */}
+          {isArcadeMode && (
           <div className="bg-zinc-900/80 border border-zinc-800 p-4 rounded space-y-3">
             <div className="flex items-center gap-2 text-xs font-mono font-bold text-yellow-400 uppercase tracking-widest">
               <Sparkles className="w-4 h-4 text-yellow-400" />
-              <span>Arcade Tiebreaker Points</span>
+              <span>{stationId === 'basketball' ? 'Basketball Shooting Rounds' : 'Arcade Tiebreaker Points'}</span>
             </div>
             <p className="text-xs text-zinc-400">
-              Numeric points recorded here update the team's tiebreaker tally.
+              {stationId === 'basketball'
+                ? 'Two shooting rounds per team. Enter both teams\' scores for each round.'
+                : 'Numeric points recorded here update the team\'s tiebreaker tally.'}
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <span className="text-[11px] font-mono text-zinc-500 uppercase block mb-1">
-                  {teams.find(t => String(t.id) === teamAId)?.name || 'Team A'} Arcade Score:
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  value={scoreA}
-                  onChange={e => setScoreA(Number(e.target.value))}
-                  className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-white font-mono text-sm focus:border-yellow-400"
-                  placeholder="0"
-                />
+            {stationId === 'basketball' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { label: 'Round 1', a: basketballRound1A, b: basketballRound1B, setA: setBasketballRound1A, setB: setBasketballRound1B },
+                  { label: 'Round 2', a: basketballRound2A, b: basketballRound2B, setA: setBasketballRound2A, setB: setBasketballRound2B },
+                ].map(round => (
+                  <div key={round.label} className="rounded border border-zinc-800 bg-black/40 p-3 space-y-3">
+                    <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-300">{round.label}</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="text-[11px] font-mono text-zinc-500 uppercase">
+                        Team A
+                        <input type="number" min="0" value={round.a} onChange={e => round.setA(Number(e.target.value))} className="mt-1 w-full bg-black border border-zinc-800 rounded px-3 py-2 text-white font-mono text-lg focus:border-yellow-400" placeholder="0" />
+                      </label>
+                      <label className="text-[11px] font-mono text-zinc-500 uppercase">
+                        Team B
+                        <input type="number" min="0" value={round.b} onChange={e => round.setB(Number(e.target.value))} className="mt-1 w-full bg-black border border-zinc-800 rounded px-3 py-2 text-white font-mono text-lg focus:border-yellow-400" placeholder="0" />
+                      </label>
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              {teamBId && (
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <span className="text-[11px] font-mono text-zinc-500 uppercase block mb-1">
-                    {teams.find(t => String(t.id) === teamBId)?.name || 'Team B'} Arcade Score:
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={scoreB}
-                    onChange={e => setScoreB(Number(e.target.value))}
-                    className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-white font-mono text-sm focus:border-yellow-400"
-                    placeholder="0"
-                  />
+                  <span className="text-[11px] font-mono text-zinc-500 uppercase block mb-1">{teams.find(t => String(t.id) === teamAId)?.name || 'Team A'} Arcade Score:</span>
+                  <input type="number" min="0" value={scoreA} onChange={e => setScoreA(Number(e.target.value))} className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-white font-mono text-sm focus:border-yellow-400" placeholder="0" />
                 </div>
-              )}
-            </div>
+                {teamBId && (
+                  <div>
+                    <span className="text-[11px] font-mono text-zinc-500 uppercase block mb-1">{teams.find(t => String(t.id) === teamBId)?.name || 'Team B'} Arcade Score:</span>
+                    <input type="number" min="0" value={scoreB} onChange={e => setScoreB(Number(e.target.value))} className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-white font-mono text-sm focus:border-yellow-400" placeholder="0" />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+          )}
 
           {/* Optional Notes */}
           <div className="space-y-2">
