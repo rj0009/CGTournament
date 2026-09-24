@@ -24,7 +24,9 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [roundSeconds, setRoundSeconds] = useState(180);
+  const timerDuration = stationId === 'pool' ? 600 : 180;
+  const hasStationTimer = stationId === 'foosball' || stationId === 'pool';
+  const [roundSeconds, setRoundSeconds] = useState(timerDuration);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [roundNumber, setRoundNumber] = useState(1);
 
@@ -108,13 +110,13 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
 
   const resetRoundTimer = () => {
     setIsTimerRunning(false);
-    setRoundSeconds(180);
+    setRoundSeconds(timerDuration);
   };
 
   const advanceRound = () => {
     setIsTimerRunning(false);
     setRoundNumber(round => Math.min(3, round + 1));
-    setRoundSeconds(180);
+    setRoundSeconds(timerDuration);
   };
 
   const formattedRoundTime = `${Math.floor(roundSeconds / 60)}:${String(roundSeconds % 60).padStart(2, '0')}`;
@@ -258,25 +260,25 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
           </div>
         </div>
 
-        {stationId === 'foosball' && (
-          <section className="bg-zinc-950 border border-yellow-400/30 p-5 rounded-lg shadow-xl" aria-labelledby="foosball-rules-heading">
+        {hasStationTimer && (
+          <section className="bg-zinc-950 border border-yellow-400/30 p-5 rounded-lg shadow-xl" aria-labelledby="station-timer-heading">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-yellow-400">
                   <Timer className="w-5 h-5" />
-                  <h2 id="foosball-rules-heading" className="text-sm font-black uppercase tracking-widest">Foosball Station Rules</h2>
+                  <h2 id="station-timer-heading" className="text-sm font-black uppercase tracking-widest">{stationId === 'pool' ? 'Pool Table Station Timer' : 'Foosball Station Rules'}</h2>
                 </div>
                 <p className="mt-2 text-xs font-mono text-zinc-400 uppercase tracking-wide">
-                  3 rounds total · Best of 3 matches wins the station · 3 minutes per round
+                  {stationId === 'pool' ? '10 minute station timer' : '3 rounds total · Best of 3 matches wins the station · 3 minutes per round'}
                 </p>
-                <p className="mt-2 text-xs font-mono text-zinc-500">Round {roundNumber} of 3</p>
+                {stationId === 'foosball' && <p className="mt-2 text-xs font-mono text-zinc-500">Round {roundNumber} of 3</p>}
               </div>
 
               <div className="flex items-center gap-2 sm:flex-col sm:items-end">
                 <div className={`font-mono text-4xl font-black tabular-nums ${roundSeconds === 0 ? 'text-red-400' : 'text-white'}`} aria-live="polite">
                   {formattedRoundTime}
                 </div>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-500">Round stopwatch</span>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-500">{stationId === 'pool' ? 'Station stopwatch' : 'Round stopwatch'}</span>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -297,14 +299,14 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                 <RotateCcw className="w-4 h-4" />
                 Reset round
               </button>
-              <button
+              {stationId === 'foosball' && <button
                 type="button"
                 onClick={advanceRound}
                 disabled={roundNumber === 3}
                 className="rounded border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-black uppercase tracking-wider text-zinc-200 transition-colors hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next round
-              </button>
+              </button>}
             </div>
           </section>
         )}
