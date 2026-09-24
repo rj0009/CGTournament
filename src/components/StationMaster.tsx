@@ -24,8 +24,8 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const timerDuration = stationId === 'pool' ? 720 : 180;
-  const hasStationTimer = stationId === 'foosball' || stationId === 'pool';
+  const timerDuration = stationId === 'pool' || stationId === 'darts' ? 720 : 180;
+  const hasStationTimer = stationId === 'foosball' || stationId === 'pool' || stationId === 'darts';
   const [roundSeconds, setRoundSeconds] = useState(timerDuration);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [roundNumber, setRoundNumber] = useState(1);
@@ -266,10 +266,10 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
               <div>
                 <div className="flex items-center gap-2 text-yellow-400">
                   <Timer className="w-5 h-5" />
-                  <h2 id="station-timer-heading" className="text-sm font-black uppercase tracking-widest">{stationId === 'pool' ? 'Pool Table Station Timer' : 'Foosball Station Rules'}</h2>
+                  <h2 id="station-timer-heading" className="text-sm font-black uppercase tracking-widest">{stationId === 'pool' ? 'Pool Table Station Timer' : stationId === 'darts' ? 'Darts Station Timer' : 'Foosball Station Rules'}</h2>
                 </div>
                 <p className="mt-2 text-xs font-mono text-zinc-400 uppercase tracking-wide">
-                  {stationId === 'pool' ? '12 minute station timer' : '3 rounds total · Best of 3 matches wins the station · 3 minutes per round'}
+                  {stationId === 'pool' || stationId === 'darts' ? '12 minute station timer' : '3 rounds total · Best of 3 matches wins the station · 3 minutes per round'}
                 </p>
                 {stationId === 'foosball' && <p className="mt-2 text-xs font-mono text-zinc-500">Round {roundNumber} of 3</p>}
               </div>
@@ -278,7 +278,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                 <div className={`font-mono text-4xl font-black tabular-nums ${roundSeconds === 0 ? 'text-red-400' : 'text-white'}`} aria-live="polite">
                   {formattedRoundTime}
                 </div>
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-500">{stationId === 'pool' ? 'Station stopwatch' : 'Round stopwatch'}</span>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-500">{stationId === 'pool' || stationId === 'darts' ? 'Station stopwatch' : 'Round stopwatch'}</span>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
