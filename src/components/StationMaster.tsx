@@ -19,6 +19,10 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
   const [outcome, setOutcome] = useState<'a_win' | 'draw' | 'b_win'>('a_win');
   const [scoreA, setScoreA] = useState<number>(0);
   const [scoreB, setScoreB] = useState<number>(0);
+  const [basketballRound1A, setBasketballRound1A] = useState<number>(0);
+  const [basketballRound1B, setBasketballRound1B] = useState<number>(0);
+  const [basketballRound2A, setBasketballRound2A] = useState<number>(0);
+  const [basketballRound2B, setBasketballRound2B] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -141,6 +145,10 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
     setIsSubmitting(true);
 
     try {
+      const basketballTotalA = basketballRound1A + basketballRound2A;
+      const basketballTotalB = basketballRound1B + basketballRound2B;
+      const submittedScoreA = stationId === 'basketball' ? basketballTotalA : scoreA;
+      const submittedScoreB = stationId === 'basketball' ? basketballTotalB : scoreB;
       let winner_id: number | null = null;
       let is_draw = false;
 
@@ -153,9 +161,9 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
           is_draw = true;
         }
       } else {
-        if (Number(scoreA) > Number(scoreB)) {
+        if (submittedScoreA > submittedScoreB) {
           winner_id = Number(teamAId);
-        } else if (Number(scoreB) > Number(scoreA)) {
+        } else if (submittedScoreB > submittedScoreA) {
           winner_id = Number(teamBId);
         } else {
           is_draw = true;
@@ -168,15 +176,21 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
         team_b_id: isArcade && !teamBId ? null : Number(teamBId),
         winner_id,
         is_draw,
-        score_a: Number(scoreA) || 0,
-        score_b: Number(scoreB) || 0,
-        notes,
+        score_a: submittedScoreA,
+        score_b: submittedScoreB,
+        notes: stationId === 'basketball'
+          ? `Round 1: Team A ${basketballRound1A} - Team B ${basketballRound1B}; Round 2: Team A ${basketballRound2A} - Team B ${basketballRound2B}${notes ? `; ${notes}` : ''}`
+          : notes,
       };
 
       await submitScore(payload);
       setSuccessMessage('Match result recorded!');
       setScoreA(0);
       setScoreB(0);
+      setBasketballRound1A(0);
+      setBasketballRound1B(0);
+      setBasketballRound2A(0);
+      setBasketballRound2B(0);
       setNotes('');
       loadStationMatches();
     } catch (err: any) {
@@ -469,47 +483,53 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
             </div>
           )}
 
-          {/* Tiebreaker Arcade Challenge score entry */}
+          {/* Arcade score entry */}
           {isArcadeMode && (
           <div className="bg-zinc-900/80 border border-zinc-800 p-4 rounded space-y-3">
             <div className="flex items-center gap-2 text-xs font-mono font-bold text-yellow-400 uppercase tracking-widest">
               <Sparkles className="w-4 h-4 text-yellow-400" />
-              <span>Arcade Tiebreaker Points</span>
+              <span>{stationId === 'basketball' ? 'Basketball Shooting Rounds' : 'Arcade Tiebreaker Points'}</span>
             </div>
             <p className="text-xs text-zinc-400">
-              Numeric points recorded here update the team's tiebreaker tally.
+              {stationId === 'basketball'
+                ? 'Two shooting rounds per team. Enter both teams\' scores for each round.'
+                : 'Numeric points recorded here update the team\'s tiebreaker tally.'}
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <span className="text-[11px] font-mono text-zinc-500 uppercase block mb-1">
-                  {teams.find(t => String(t.id) === teamAId)?.name || 'Team A'} Arcade Score:
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  value={scoreA}
-                  onChange={e => setScoreA(Number(e.target.value))}
-                  className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-white font-mono text-sm focus:border-yellow-400"
-                  placeholder="0"
-                />
+            {stationId === 'basketball' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { label: 'Round 1', a: basketballRound1A, b: basketballRound1B, setA: setBasketballRound1A, setB: setBasketballRound1B },
+                  { label: 'Round 2', a: basketballRound2A, b: basketballRound2B, setA: setBasketballRound2A, setB: setBasketballRound2B },
+                ].map(round => (
+                  <div key={round.label} className="rounded border border-zinc-800 bg-black/40 p-3 space-y-3">
+                    <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-300">{round.label}</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="text-[11px] font-mono text-zinc-500 uppercase">
+                        Team A
+                        <input type="number" min="0" value={round.a} onChange={e => round.setA(Number(e.target.value))} className="mt-1 w-full bg-black border border-zinc-800 rounded px-3 py-2 text-white font-mono text-lg focus:border-yellow-400" placeholder="0" />
+                      </label>
+                      <label className="text-[11px] font-mono text-zinc-500 uppercase">
+                        Team B
+                        <input type="number" min="0" value={round.b} onChange={e => round.setB(Number(e.target.value))} className="mt-1 w-full bg-black border border-zinc-800 rounded px-3 py-2 text-white font-mono text-lg focus:border-yellow-400" placeholder="0" />
+                      </label>
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              {teamBId && (
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <span className="text-[11px] font-mono text-zinc-500 uppercase block mb-1">
-                    {teams.find(t => String(t.id) === teamBId)?.name || 'Team B'} Arcade Score:
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={scoreB}
-                    onChange={e => setScoreB(Number(e.target.value))}
-                    className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-white font-mono text-sm focus:border-yellow-400"
-                    placeholder="0"
-                  />
+                  <span className="text-[11px] font-mono text-zinc-500 uppercase block mb-1">{teams.find(t => String(t.id) === teamAId)?.name || 'Team A'} Arcade Score:</span>
+                  <input type="number" min="0" value={scoreA} onChange={e => setScoreA(Number(e.target.value))} className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-white font-mono text-sm focus:border-yellow-400" placeholder="0" />
                 </div>
-              )}
-            </div>
+                {teamBId && (
+                  <div>
+                    <span className="text-[11px] font-mono text-zinc-500 uppercase block mb-1">{teams.find(t => String(t.id) === teamBId)?.name || 'Team B'} Arcade Score:</span>
+                    <input type="number" min="0" value={scoreB} onChange={e => setScoreB(Number(e.target.value))} className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-white font-mono text-sm focus:border-yellow-400" placeholder="0" />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           )}
 
