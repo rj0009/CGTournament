@@ -278,7 +278,7 @@ export const Leaderboard: React.FC = () => {
                 /station/[station-name]
               </code>
               <div className="flex flex-wrap gap-1.5 pt-1">
-                {['foosball', 'pool', 'darts', 'basketball', 'soccer'].map(st => (
+                {['foosball', 'pool', 'darts', 'basketball'].map(st => (
                   <span key={st} className="px-2 py-0.5 bg-black/10 text-[10px] font-black uppercase tracking-wider rounded">
                     {st}
                   </span>

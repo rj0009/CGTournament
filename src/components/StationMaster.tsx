@@ -46,7 +46,6 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
       case 'pool': return Target;
       case 'darts': return Flame;
       case 'basketball': return Activity;
-      case 'soccer': return Gamepad2;
       default: return Gamepad2;
     }
   };
