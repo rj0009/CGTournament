@@ -16,6 +16,16 @@ async function call(payload: Record<string, unknown>) {
 const app = express();
 app.use(express.json());
 
+// Write protection: all non-GET calls must carry the event passcode header.
+const EVENT_PASSCODE = process.env.EVENT_PASSCODE || '4321';
+app.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'OPTIONS') return next();
+  if (req.get('x-event-passcode') !== EVENT_PASSCODE) {
+    return res.status(401).json({ success: false, error: 'Invalid event passcode' });
+  }
+  next();
+});
+
 app.get('/api/teams', async (_req, res) => {
   try {
     res.json(await call({ action: 'teams_get' }));

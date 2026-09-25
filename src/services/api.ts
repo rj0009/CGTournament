@@ -34,7 +34,12 @@ interface StoredMatch {
 // Helper to safely parse JSON responses
 async function safeFetch<T>(url: string, options?: RequestInit): Promise<T | null> {
   try {
-    const res = await fetch(url, options);
+    const method = (options?.method || 'GET').toUpperCase();
+    const headers: Record<string, string> = { ...((options?.headers as Record<string, string>) || {}) };
+    if (method !== 'GET') {
+      headers['X-Event-Passcode'] = ((import.meta as any).env?.VITE_APP_PASSWORD) || '4321';
+    }
+    const res = await fetch(url, { ...options, headers });
     const contentType = res.headers.get('content-type') || '';
     if (res.ok && contentType.toLowerCase().includes('application/json')) {
       const data = await res.json();
