@@ -448,7 +448,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                 </button>
               </div>
             </div>
-          ) : (
+          ) : stationId === 'basketball' ? null : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="block text-xs font-mono font-bold text-zinc-400 uppercase tracking-widest">
@@ -515,7 +515,28 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : null}
+
+            {stationId === 'basketball' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-zinc-800">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-mono text-zinc-500 uppercase block">{teams.find(t => String(t.id) === teamAId)?.name || 'Team A'} Final Score (Auto)</span>
+                  <div className="w-full bg-black border border-yellow-400/40 rounded px-4 py-3 text-yellow-400 font-mono font-black text-2xl">
+                    {basketballRound1A + basketballRound2A}
+                  </div>
+                </div>
+                {teamBId && (
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-mono text-zinc-500 uppercase block">{teams.find(t => String(t.id) === teamBId)?.name || 'Team B'} Final Score (Auto)</span>
+                    <div className="w-full bg-black border border-yellow-400/40 rounded px-4 py-3 text-yellow-400 font-mono font-black text-2xl">
+                      {basketballRound1B + basketballRound2B}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {stationId !== 'basketball' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <span className="text-[11px] font-mono text-zinc-500 uppercase block mb-1">{teams.find(t => String(t.id) === teamAId)?.name || 'Team A'} Arcade Score:</span>
