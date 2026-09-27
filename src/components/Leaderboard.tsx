@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { LeaderboardEntry, MatchResult } from '../types';
 import { Trophy, RefreshCw, Flame, Sparkles } from 'lucide-react';
 import { getLeaderboard, getMatches } from '../services/api';
+import { RotationClock } from './RotationClock';
 
 export const Leaderboard: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -104,6 +105,8 @@ export const Leaderboard: React.FC = () => {
 
           {/* Clock & Status */}
           <div className="flex items-center gap-4 bg-zinc-900/90 border border-zinc-800 px-5 py-3 rounded-lg shrink-0">
+            <RotationClock />
+            <div className="w-px h-12 bg-zinc-800"></div>
             <div className="text-right font-mono">
               <div className="text-2xl font-bold tracking-tight text-yellow-400 tabular-nums">
                 {secondsUntilNextRefresh}s <span className="text-xs text-zinc-500 uppercase font-sans font-normal">Next Poll</span>
