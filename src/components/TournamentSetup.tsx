@@ -182,7 +182,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {teams.map((name, idx) => (
+                {teams.map((team, idx) => (
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center justify-between">
                       <label className="block text-[11px] font-mono font-bold text-zinc-500 uppercase tracking-widest">
@@ -202,7 +202,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({ onNavigate }) 
                     </div>
                     <input
                       type="text"
-                      value={name}
+                      value={team.name}
                       onChange={e => handleTeamChange(idx, e.target.value)}
                       required
                       placeholder={`Team Name ${idx + 1}`}

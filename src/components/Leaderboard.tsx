@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { LeaderboardEntry, MatchResult } from '../types';
-import { Trophy, RefreshCw, Flame, Gamepad2, Sparkles } from 'lucide-react';
+import { Trophy, RefreshCw, Flame, Sparkles } from 'lucide-react';
 import { getLeaderboard, getMatches } from '../services/api';
 
 export const Leaderboard: React.FC = () => {
@@ -269,27 +269,6 @@ export const Leaderboard: React.FC = () => {
                     </div>
                   ))
                 )}
-              </div>
-            </div>
-
-            {/* Station Master Info Banner */}
-            <div className="p-6 bg-yellow-400 text-black rounded-lg shadow-xl space-y-3">
-              <div className="flex items-center gap-2">
-                <Gamepad2 className="w-5 h-5 stroke-[2.5]" />
-                <h3 className="text-xs font-black uppercase tracking-[0.2em]">Station Master Link</h3>
-              </div>
-              <p className="text-xs font-bold leading-snug">
-                Access your game station scoring interface from your phone browser:
-              </p>
-              <code className="block bg-black text-yellow-400 p-2 text-xs font-mono rounded font-bold uppercase tracking-wider">
-                /station/[station-name]
-              </code>
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {['foosball', 'pool', 'darts', 'basketball'].map(st => (
-                  <span key={st} className="px-2 py-0.5 bg-black/10 text-[10px] font-black uppercase tracking-wider rounded">
-                    {st}
-                  </span>
-                ))}
               </div>
             </div>
 

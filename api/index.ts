@@ -4,13 +4,30 @@ import express from 'express';
 // which is the persistent single source of truth for teams + matches.
 const BACKEND = 'https://jarvis-4ab907e4.base44.app/functions/cgTournament';
 
+// 5s TTL cache for read actions: the TV leaderboard and every station phone
+// poll these continuously on event day; serving repeats from cache keeps the
+// Base44 function far below its rate limit. Writes are never cached.
+const CACHE_TTL_MS = 5000;
+const cache = new Map<string, { t: number; v: unknown }>();
+
 async function call(payload: Record<string, unknown>) {
+  const isRead = payload.action === 'teams_get' || payload.action === 'leaderboard' || payload.action === 'stations' || payload.action === 'matches_get';
+  const key = isRead ? String(payload.action) : '';
+  if (isRead) {
+    const hit = cache.get(key);
+    if (hit && Date.now() - hit.t < CACHE_TTL_MS) return hit.v;
+  }
   const r = await fetch(BACKEND, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return r.json();
+  const v = await r.json();
+  if (isRead && v && (v as any).success) {
+    if (cache.size > 50) cache.clear();
+    cache.set(key, { t: Date.now(), v });
+  }
+  return v;
 }
 
 const app = express();
