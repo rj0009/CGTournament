@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Play } from 'lucide-react';
-import { getRotation, startRotation } from '../services/api';
+import { Play, Pause, RotateCcw } from 'lucide-react';
+import { getRotation, startRotation, pauseRotation, resumeRotation } from '../services/api';
 
 // Station-rotation countdown — MANUALLY TRIGGERED. Tap START to begin a 15-min cycle;
 // when it hits 0:00 the clock HOLDS on SWITCH! (with a loud horn blast) until someone
@@ -18,7 +18,7 @@ function readCycleMs(): number {
 
 export const RotationClock: React.FC = () => {
   const [tick, setTick] = useState<number>(Date.now());
-  const [rot, setRot] = useState<{ started_at: number | null; cycle_ms: number; offset: number } | null>(null);
+  const [rot, setRot] = useState<{ started_at: number | null; cycle_ms: number; offset: number; paused: boolean } | null>(null);
   const [starting, setStarting] = useState<boolean>(false);
   const [hornJustFired, setHornJustFired] = useState<boolean>(false);
   const [cycleMs, setCycleMs] = useState<number>(readCycleMs());
@@ -67,6 +67,7 @@ export const RotationClock: React.FC = () => {
         started_at: r.started_at ?? null,
         cycle_ms: r.cycle_ms || 900000,
         offset: (r.server_now || Date.now()) - Date.now(),
+        paused: !!(r as any).paused,
       });
     }
   };
@@ -96,12 +97,16 @@ export const RotationClock: React.FC = () => {
   // running, restarts it immediately at the new length (all screens follow via poll).
   const applyDuration = (ms: number) => {
     setCycleMs(ms);
-    if (rot && rot.started_at !== null) doStart(ms);
+    if (rot && rot.started_at !== null && !rot.paused) doStart(ms);
   };
 
+  const doPause = async () => { await pauseRotation(); poll(); };
+  const doResume = async () => { await resumeRotation(); poll(); };
+
   const remain = rot && rot.started_at !== null
-    ? rot.cycle_ms - (tick + rot.offset - rot.started_at)
+    ? Math.max(0, rot.cycle_ms - (tick + rot.offset - rot.started_at))
     : null;
+  const isPaused = !!rot?.paused;
 
   if (remain !== null) {
     if (prevRemain.current !== null && prevRemain.current > 0 && remain <= 0) blastHorn();
@@ -124,21 +129,52 @@ export const RotationClock: React.FC = () => {
       </div>
       <div
         className={`text-5xl font-black tabular-nums tracking-tight leading-none mt-1 ${
-          expired
-            ? 'text-red-500 animate-pulse'
-            : idle
-              ? 'text-zinc-400'
-              : under60
-                ? 'text-red-500 animate-pulse'
-                : 'text-yellow-400'
+          isPaused
+            ? 'text-zinc-300'
+            : expired
+              ? 'text-red-500 animate-pulse'
+              : idle
+                ? 'text-zinc-400'
+                : under60
+                  ? 'text-red-500 animate-pulse'
+                  : 'text-yellow-400'
         }`}
       >
-        {expired ? 'SWITCH!' : idle ? 'READY' : disp}
+        {isPaused ? 'PAUSED' : expired ? 'SWITCH!' : idle ? 'READY' : disp}
       </div>
       <div className={`text-[10px] uppercase tracking-widest mt-1 ${
         hornJustFired ? 'text-yellow-400 font-black' : expired ? 'text-red-500 font-black animate-pulse' : 'text-zinc-500'
       }`}>
-        {hornJustFired ? '🔊 HORN' : expired ? 'Start next rotation' : idle ? 'Waiting to start' : 'Next switch'}
+        {hornJustFired ? '🔊 HORN' : isPaused ? 'Timer paused' : expired ? 'Start next rotation' : idle ? 'Waiting to start' : 'Next switch'}
+      </div>
+      <div className="flex items-center justify-center gap-1.5 mt-1.5">
+        {rot && rot.started_at !== null && !isPaused && !idle && !expired && (
+          <button
+            onClick={doPause}
+            disabled={starting}
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-black uppercase tracking-widest rounded transition-colors"
+          >
+            <Pause className="w-3 h-3 stroke-[3]" /> Stop
+          </button>
+        )}
+        {isPaused && (
+          <button
+            onClick={doResume}
+            disabled={starting}
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-400 hover:bg-yellow-300 text-black text-[10px] font-black uppercase tracking-widest rounded transition-colors"
+          >
+            <Play className="w-3 h-3 stroke-[3]" /> Resume
+          </button>
+        )}
+        {rot && rot.started_at !== null && (isPaused || expired) && (
+          <button
+            onClick={() => doStart(rot.cycle_ms)}
+            disabled={starting}
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-black uppercase tracking-widest rounded transition-colors"
+          >
+            <RotateCcw className="w-3 h-3 stroke-[3]" /> Restart
+          </button>
+        )}
       </div>
       <div className="flex items-center justify-center gap-1 mt-1.5 flex-wrap">
         {[['15m', 900000], ['10m', 600000], ['5m', 300000], ['1m', 60000], ['30s', 30000]].map(([lbl, ms]) => (

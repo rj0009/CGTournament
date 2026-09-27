@@ -44,6 +44,14 @@ export async function startRotation(cycleMs: number): Promise<{ success: boolean
   });
 }
 
+export async function pauseRotation(): Promise<{ success: boolean; paused?: boolean; error?: string } | null> {
+  return await safeFetch<{ success: boolean; paused?: boolean; error?: string }>('/api/rotation/pause', { method: 'POST' });
+}
+
+export async function resumeRotation(): Promise<{ success: boolean; paused?: boolean; error?: string } | null> {
+  return await safeFetch<{ success: boolean; paused?: boolean; error?: string }>('/api/rotation/resume', { method: 'POST' });
+}
+
 async function safeFetch<T>(url: string, options?: RequestInit): Promise<T | null> {
   try {
     const method = (options?.method || 'GET').toUpperCase();

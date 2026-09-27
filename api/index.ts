@@ -141,6 +141,22 @@ app.post('/api/rotation', async (req, res) => {
   }
 });
 
+app.post('/api/rotation/pause', async (_req, res) => {
+  try {
+    res.json(await call({ action: 'rotation_pause' }));
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/rotation/resume', async (_req, res) => {
+  try {
+    res.json(await call({ action: 'rotation_resume' }));
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post('/api/reset', async (_req, res) => {
   try {
     res.json(await call({ action: 'reset' }));
