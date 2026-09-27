@@ -21,7 +21,7 @@ export const RotationClock: React.FC = () => {
   const [rot, setRot] = useState<{ started_at: number | null; cycle_ms: number; offset: number } | null>(null);
   const [starting, setStarting] = useState<boolean>(false);
   const [hornJustFired, setHornJustFired] = useState<boolean>(false);
-  const cycleMs = useRef<number>(readCycleMs());
+  const [cycleMs, setCycleMs] = useState<number>(readCycleMs());
   const prevRemain = useRef<number | null>(null);
   const audioCtx = useRef<AudioContext | null>(null);
 
@@ -85,11 +85,18 @@ export const RotationClock: React.FC = () => {
     return () => { clearInterval(id); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
   }, []);
 
-  const doStart = async () => {
+  const doStart = async (ms?: number) => {
     setStarting(true);
-    try { await startRotation(cycleMs.current); } catch { /* keep UI usable */ }
+    try { await startRotation(ms ?? cycleMs); } catch { /* keep UI usable */ }
     setStarting(false);
     poll();
+  };
+
+  // Configure timing: sets the length for the next START; if a rotation is already
+  // running, restarts it immediately at the new length (all screens follow via poll).
+  const applyDuration = (ms: number) => {
+    setCycleMs(ms);
+    if (rot && rot.started_at !== null) doStart(ms);
   };
 
   const remain = rot && rot.started_at !== null
@@ -133,9 +140,38 @@ export const RotationClock: React.FC = () => {
       }`}>
         {hornJustFired ? '🔊 HORN' : expired ? 'Start next rotation' : idle ? 'Waiting to start' : 'Next switch'}
       </div>
+      <div className="flex items-center justify-center gap-1 mt-1.5 flex-wrap">
+        {[['15m', 900000], ['10m', 600000], ['5m', 300000], ['1m', 60000], ['30s', 30000]].map(([lbl, ms]) => (
+          <button
+            key={String(ms)}
+            onClick={() => applyDuration(ms as number)}
+            className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded border transition-colors ${
+              cycleMs === ms
+                ? 'bg-yellow-400 text-black border-yellow-400'
+                : 'text-zinc-400 border-zinc-700 hover:border-yellow-400 hover:text-yellow-400'
+            }`}
+          >
+            {lbl as string}
+          </button>
+        ))}
+        <input
+          type="text"
+          placeholder="custom (e.g. 8 or 45s)"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              const raw = (e.target as HTMLInputElement).value.trim();
+              let ms: number | null = null;
+              if (/^\d+(\.\d+)?s$/i.test(raw)) ms = parseFloat(raw) * 1000;
+              else if (/^\d+(\.\d+)?$/.test(raw)) ms = parseFloat(raw) * 60 * 1000;
+              if (ms && ms >= 1000) applyDuration(ms);
+            }
+          }}
+          className="w-28 px-1.5 py-0.5 text-[9px] bg-zinc-900 border border-zinc-700 rounded text-zinc-300 placeholder:text-zinc-600 focus:border-yellow-400 focus:outline-none"
+        />
+      </div>
       {(idle || expired) && (
         <button
-          onClick={doStart}
+          onClick={() => doStart()}
           disabled={starting}
           className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-black text-[11px] font-black uppercase tracking-widest rounded transition-colors"
         >
