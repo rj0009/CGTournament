@@ -169,7 +169,7 @@ export const Leaderboard: React.FC = () => {
                           {team.rank === 1 && (
                             <Trophy className="w-5 h-5 text-yellow-400 shrink-0 inline" />
                           )}
-                          <span className="truncate">[Team {team.id}] {team.name}</span>
+                          <span className="break-words whitespace-normal leading-snug min-w-0">[Team {team.id}] {team.name}</span>
                         </div>
                         <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mt-0.5">
                           Tiebreak: Head-to-Head → BB

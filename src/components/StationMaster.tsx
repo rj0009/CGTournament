@@ -411,7 +411,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                       : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
                   }`}
                 >
-                  <div className="text-base truncate">
+                  <div className="text-base break-words leading-tight">
                     {teams.find(t => String(t.id) === teamAId)?.name || 'Team A'}
                   </div>
                   <div className="text-[10px] font-mono tracking-widest mt-1">WIN (3 PTS)</div>
@@ -441,7 +441,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                       : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
                   }`}
                 >
-                  <div className="text-base truncate">
+                  <div className="text-base break-words leading-tight">
                     {teams.find(t => String(t.id) === teamBId)?.name || 'Team B'}
                   </div>
                   <div className="text-[10px] font-mono tracking-widest mt-1">WIN (3 PTS)</div>
