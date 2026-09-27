@@ -32,6 +32,18 @@ interface StoredMatch {
 }
 
 // Helper to safely parse JSON responses
+export async function getRotation(): Promise<{ success: boolean; started_at: number | null; cycle_ms: number; server_now: number; error?: string } | null> {
+  return await safeFetch<{ success: boolean; started_at: number | null; cycle_ms: number; server_now: number; error?: string }>('/api/rotation');
+}
+
+export async function startRotation(cycleMs: number): Promise<{ success: boolean; started_at: number; cycle_ms: number; error?: string } | null> {
+  return await safeFetch<{ success: boolean; started_at: number; cycle_ms: number; error?: string }>('/api/rotation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cycle_ms: cycleMs }),
+  });
+}
+
 async function safeFetch<T>(url: string, options?: RequestInit): Promise<T | null> {
   try {
     const method = (options?.method || 'GET').toUpperCase();

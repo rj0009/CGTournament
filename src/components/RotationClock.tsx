@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Play } from 'lucide-react';
+import { getRotation, startRotation } from '../services/api';
 
-// 15-minute station-rotation countdown, synced to the wall clock (:00/:15/:30/:45 by default)
-// so every screen counts down to the SAME switch moment. Loud horn blast at each boundary.
-// Configurable for testing: ?cycle=5 (minutes) or ?cycle=30s (seconds).
+// Station-rotation countdown — MANUALLY TRIGGERED. Tap START to begin a 15-min cycle;
+// when it hits 0:00 the clock HOLDS on SWITCH! (with a loud horn blast) until someone
+// taps START NEXT ROTATION. State lives on the server, so every TV and phone screen
+// counts down to the same moment. Configurable for testing: ?cycle=5 (minutes) or ?cycle=30s.
 function readCycleMs(): number {
   try {
     const raw = new URLSearchParams(window.location.search).get('cycle');
@@ -14,29 +17,28 @@ function readCycleMs(): number {
 }
 
 export const RotationClock: React.FC = () => {
-  const [now, setNow] = useState<number>(Date.now());
+  const [tick, setTick] = useState<number>(Date.now());
+  const [rot, setRot] = useState<{ started_at: number | null; cycle_ms: number; offset: number } | null>(null);
+  const [starting, setStarting] = useState<boolean>(false);
   const [hornJustFired, setHornJustFired] = useState<boolean>(false);
   const cycleMs = useRef<number>(readCycleMs());
-  const lastCycleIdx = useRef<number>(-1);
+  const prevRemain = useRef<number | null>(null);
   const audioCtx = useRef<AudioContext | null>(null);
 
-  // Horn: synthesized multi-oscillator blast (no audio file needed). Autoplay-gated:
-  // unlocked on the first tap/click/key anywhere; after that it fires at every boundary.
   const blastHorn = () => {
     try {
       const AC = window.AudioContext || (window as any).webkitAudioContext;
       if (!AC) return;
       if (!audioCtx.current) audioCtx.current = new AC();
       const ctx = audioCtx.current;
-      if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); }
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
       const t0 = ctx.currentTime + 0.02;
       const master = ctx.createGain();
-      master.gain.value = 1.0;                      // LOUD
+      master.gain.value = 1.0;                                   // LOUD
       const lp = ctx.createBiquadFilter();
       lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = 1.2;
       master.connect(lp); lp.connect(ctx.destination);
-      // two blasts: short-short-long (station change signal)
-      const blasts = [[0, 0.55], [0.75, 0.55], [1.5, 2.2]];
+      const blasts: [number, number][] = [[0, 0.55], [0.75, 0.55], [1.5, 2.2]];  // short-short-long
       blasts.forEach(([start, dur]) => {
         const g = ctx.createGain();
         g.gain.setValueAtTime(0.0001, t0 + start);
@@ -58,24 +60,55 @@ export const RotationClock: React.FC = () => {
     } catch { /* audio unavailable — visual flash still fires */ }
   };
 
+  const poll = async () => {
+    const r = await getRotation();
+    if (r && (r as any).success) {
+      setRot({
+        started_at: r.started_at ?? null,
+        cycle_ms: r.cycle_ms || 900000,
+        offset: (r.server_now || Date.now()) - Date.now(),
+      });
+    }
+  };
+
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 250);
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick(Date.now()), 250);
     const unlock = () => { if (audioCtx.current?.state === 'suspended') audioCtx.current.resume().catch(() => {}); };
     window.addEventListener('pointerdown', unlock, { once: true });
     window.addEventListener('keydown', unlock, { once: true });
     return () => { clearInterval(id); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
   }, []);
 
-  const CYCLE = cycleMs.current;
-  const cycleIdx = Math.floor(now / CYCLE);
-  if (lastCycleIdx.current !== -1 && cycleIdx !== lastCycleIdx.current) blastHorn();
-  lastCycleIdx.current = cycleIdx;
+  const doStart = async () => {
+    setStarting(true);
+    try { await startRotation(cycleMs.current); } catch { /* keep UI usable */ }
+    setStarting(false);
+    poll();
+  };
 
-  const remain = CYCLE - (now % CYCLE);
-  const mm = String(Math.floor(remain / 60000)).padStart(2, '0');
-  const ss = String(Math.floor((remain % 60000) / 1000)).padStart(2, '0');
-  const under60 = remain <= 60 * 1000;
-  const switchNow = remain <= 4000;
+  const remain = rot && rot.started_at !== null
+    ? rot.cycle_ms - (tick + rot.offset - rot.started_at)
+    : null;
+
+  if (remain !== null) {
+    if (prevRemain.current !== null && prevRemain.current > 0 && remain <= 0) blastHorn();
+    prevRemain.current = remain;
+  }
+
+  const idle = rot !== null && rot.started_at === null;
+  const expired = remain !== null && remain <= 0;
+  const under60 = remain !== null && remain > 0 && remain <= 60 * 1000;
+  const disp = remain === null
+    ? '--:--'
+    : expired
+      ? '00:00'
+      : `${String(Math.floor(remain / 60000)).padStart(2, '0')}:${String(Math.floor((remain % 60000) / 1000)).padStart(2, '0')}`;
 
   return (
     <div className="text-center font-mono">
@@ -84,18 +117,32 @@ export const RotationClock: React.FC = () => {
       </div>
       <div
         className={`text-5xl font-black tabular-nums tracking-tight leading-none mt-1 ${
-          switchNow
-            ? 'text-white animate-pulse'
-            : under60
-              ? 'text-red-500 animate-pulse'
-              : 'text-yellow-400'
+          expired
+            ? 'text-red-500 animate-pulse'
+            : idle
+              ? 'text-zinc-400'
+              : under60
+                ? 'text-red-500 animate-pulse'
+                : 'text-yellow-400'
         }`}
       >
-        {switchNow ? 'SWITCH!' : `${mm}:${ss}`}
+        {expired ? 'SWITCH!' : idle ? 'READY' : disp}
       </div>
-      <div className={`text-[10px] uppercase tracking-widest mt-1 ${switchNow ? 'text-red-500 font-black animate-pulse' : 'text-zinc-500'}`}>
-        {hornJustFired ? '🔊 HORN' : switchNow ? 'Rotate stations now' : 'Next switch'}
+      <div className={`text-[10px] uppercase tracking-widest mt-1 ${
+        hornJustFired ? 'text-yellow-400 font-black' : expired ? 'text-red-500 font-black animate-pulse' : 'text-zinc-500'
+      }`}>
+        {hornJustFired ? '🔊 HORN' : expired ? 'Start next rotation' : idle ? 'Waiting to start' : 'Next switch'}
       </div>
+      {(idle || expired) && (
+        <button
+          onClick={doStart}
+          disabled={starting}
+          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-black text-[11px] font-black uppercase tracking-widest rounded transition-colors"
+        >
+          <Play className="w-3.5 h-3.5 stroke-[3]" />
+          {starting ? 'Starting…' : idle ? 'Start Rotation' : 'Start Next Rotation'}
+        </button>
+      )}
     </div>
   );
 };

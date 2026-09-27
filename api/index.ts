@@ -11,7 +11,7 @@ const CACHE_TTL_MS = 5000;
 const cache = new Map<string, { t: number; v: unknown }>();
 
 async function call(payload: Record<string, unknown>) {
-  const isRead = payload.action === 'teams_get' || payload.action === 'leaderboard' || payload.action === 'stations' || payload.action === 'matches_get';
+  const isRead = payload.action === 'teams_get' || payload.action === 'leaderboard' || payload.action === 'stations' || payload.action === 'matches_get' || payload.action === 'rotation_get';
   const key = isRead ? String(payload.action) : '';
   if (isRead) {
     const hit = cache.get(key);
@@ -119,6 +119,23 @@ app.get('/api/matches', async (req, res) => {
 app.delete('/api/matches/:id', async (req, res) => {
   try {
     res.json(await call({ action: 'match_delete', id: String(req.params.id) }));
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/rotation', async (_req, res) => {
+  try {
+    res.json(await call({ action: 'rotation_get' }));
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/rotation', async (req, res) => {
+  try {
+    const cycle_ms = Number(req.body?.cycle_ms) || 900000;
+    res.json(await call({ action: 'rotation_set', cycle_ms }));
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
