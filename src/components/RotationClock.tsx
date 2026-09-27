@@ -74,7 +74,7 @@ export const RotationClock: React.FC = () => {
 
   useEffect(() => {
     poll();
-    const id = setInterval(poll, 3000);
+    const id = setInterval(poll, 5000);   // countdown ticks locally; poll only syncs START/STOP events
     return () => clearInterval(id);
   }, []);
 

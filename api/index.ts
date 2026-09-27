@@ -13,9 +13,12 @@ const cache = new Map<string, { t: number; v: unknown }>();
 async function call(payload: Record<string, unknown>) {
   const isRead = payload.action === 'teams_get' || payload.action === 'leaderboard' || payload.action === 'stations' || payload.action === 'matches_get' || payload.action === 'rotation_get';
   const key = isRead ? String(payload.action) : '';
+  // rotation state changes only on manual START/STOP; other screens may lag a few seconds.
+  // Longer TTL keeps the backend function below its rate limit when several screens poll at once.
+  const ttl = payload.action === 'rotation_get' ? 10000 : CACHE_TTL_MS;
   if (isRead) {
     const hit = cache.get(key);
-    if (hit && Date.now() - hit.t < CACHE_TTL_MS) return hit.v;
+    if (hit && Date.now() - hit.t < ttl) return hit.v;
   }
   const r = await fetch(BACKEND, {
     method: 'POST',
@@ -32,6 +35,10 @@ async function call(payload: Record<string, unknown>) {
 
 const app = express();
 app.use(express.json());
+
+// Any rotation write must immediately invalidate the rotation read cache — the operator
+// polls right after pressing START/STOP and must see fresh state, not a cached one.
+function bustRotation() { cache.delete('rotation_get'); }
 
 // Write protection: all non-GET calls must carry the event passcode header.
 const EVENT_PASSCODE = process.env.EVENT_PASSCODE || '4321';
@@ -136,6 +143,7 @@ app.post('/api/rotation', async (req, res) => {
   try {
     const cycle_ms = Number(req.body?.cycle_ms) || 900000;
     res.json(await call({ action: 'rotation_set', cycle_ms }));
+    bustRotation();
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -144,6 +152,7 @@ app.post('/api/rotation', async (req, res) => {
 app.post('/api/rotation/pause', async (_req, res) => {
   try {
     res.json(await call({ action: 'rotation_pause' }));
+    bustRotation();
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -152,6 +161,7 @@ app.post('/api/rotation/pause', async (_req, res) => {
 app.post('/api/rotation/resume', async (_req, res) => {
   try {
     res.json(await call({ action: 'rotation_resume' }));
+    bustRotation();
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
