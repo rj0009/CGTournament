@@ -2,18 +2,18 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Play, Pause, RotateCcw } from 'lucide-react';
 import { getRotation, startRotation, pauseRotation, resumeRotation } from '../services/api';
 
-// Station-rotation countdown — MANUALLY TRIGGERED. Tap START to begin a 15-min cycle;
+// Station-rotation countdown — MANUALLY TRIGGERED. Tap START to begin a 12-min cycle;
 // when it hits 0:00 the clock HOLDS on SWITCH! (with a loud horn blast) until someone
 // taps START NEXT ROTATION. State lives on the server, so every TV and phone screen
 // counts down to the same moment. Configurable for testing: ?cycle=5 (minutes) or ?cycle=30s.
 function readCycleMs(): number {
   try {
     const raw = new URLSearchParams(window.location.search).get('cycle');
-    if (!raw) return 15 * 60 * 1000;
+    if (!raw) return 12 * 60 * 1000;
     if (/^\d+(\.\d+)?s$/i.test(raw)) return Math.max(1, parseFloat(raw) * 1000);
     if (/^\d+(\.\d+)?$/.test(raw)) return Math.max(1, parseFloat(raw) * 60 * 1000);
-    return 15 * 60 * 1000;
-  } catch { return 15 * 60 * 1000; }
+    return 12 * 60 * 1000;
+  } catch { return 12 * 60 * 1000; }
 }
 
 export const RotationClock: React.FC = () => {
@@ -65,7 +65,7 @@ export const RotationClock: React.FC = () => {
     if (r && (r as any).success) {
       setRot({
         started_at: r.started_at ?? null,
-        cycle_ms: r.cycle_ms || 900000,
+        cycle_ms: r.cycle_ms || 720000,
         offset: (r.server_now || Date.now()) - Date.now(),
         paused: !!(r as any).paused,
       });
@@ -177,7 +177,7 @@ export const RotationClock: React.FC = () => {
         )}
       </div>
       <div className="flex items-center justify-center gap-1 mt-1.5 flex-wrap">
-        {[['15m', 900000], ['10m', 600000], ['5m', 300000], ['1m', 60000], ['30s', 30000]].map(([lbl, ms]) => (
+        {[['12m', 720000], ['15m', 900000], ['10m', 600000], ['5m', 300000], ['1m', 60000], ['30s', 30000]].map(([lbl, ms]) => (
           <button
             key={String(ms)}
             onClick={() => applyDuration(ms as number)}

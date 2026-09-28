@@ -282,7 +282,11 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                   <h2 id="station-timer-heading" className="text-sm font-black uppercase tracking-widest">{stationId === 'pool' ? 'Pool Table Station Timer' : stationId === 'darts' ? 'Darts Station Timer' : 'Foosball Station Rules'}</h2>
                 </div>
                 <p className="mt-2 text-xs font-mono text-zinc-400 uppercase tracking-wide">
-                  {stationId === 'pool' || stationId === 'darts' ? '12 minute station timer' : '3 rounds total · Best of 3 matches wins the station · 3 minutes per round'}
+                  {stationId === 'pool'
+                  ? 'Full 8-ball game · 12-minute timebox · Time up: team with fewer balls on the table wins'
+                  : stationId === 'darts'
+                  ? '12 minute station timer'
+                  : '3 rounds total · Best of 3 matches wins the station · 3 minutes per round'}
                 </p>
                 {stationId === 'foosball' && <p className="mt-2 text-xs font-mono text-zinc-500">Round {roundNumber} of 3</p>}
               </div>
@@ -399,6 +403,11 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
               {stationId === 'foosball' && (
                 <p className="text-xs font-mono text-zinc-500">
                   After all 3 rounds, select only Win or Lose. Foosball is best of 3, so there should be no draw.
+                </p>
+              )}
+              {stationId === 'pool' && (
+                <p className="text-xs font-mono text-zinc-500">
+                  One full game within the 12-minute timebox. Game not finished when time runs out? Count the balls left on the table: the team with fewer balls remaining wins. Equal balls = draw.
                 </p>
               )}
               <div className={`grid gap-3 ${stationId === 'foosball' ? 'grid-cols-2' : 'grid-cols-3'}`}>
