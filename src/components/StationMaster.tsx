@@ -23,6 +23,8 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
   const [basketballRound1B, setBasketballRound1B] = useState<number>(0);
   const [basketballRound2A, setBasketballRound2A] = useState<number>(0);
   const [basketballRound2B, setBasketballRound2B] = useState<number>(0);
+  const [basketballRound3A, setBasketballRound3A] = useState<number>(0);
+  const [basketballRound3B, setBasketballRound3B] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -144,8 +146,8 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
     setIsSubmitting(true);
 
     try {
-      const basketballTotalA = basketballRound1A + basketballRound2A;
-      const basketballTotalB = basketballRound1B + basketballRound2B;
+      const basketballTotalA = basketballRound1A + basketballRound2A + basketballRound3A;
+      const basketballTotalB = basketballRound1B + basketballRound2B + basketballRound3B;
       const submittedScoreA = stationId === 'basketball' ? basketballTotalA : scoreA;
       const submittedScoreB = stationId === 'basketball' ? basketballTotalB : scoreB;
       let winner_id: number | null = null;
@@ -178,7 +180,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
         score_a: submittedScoreA,
         score_b: submittedScoreB,
         notes: stationId === 'basketball'
-          ? `Round 1: Team A ${basketballRound1A} - Team B ${basketballRound1B}; Round 2: Team A ${basketballRound2A} - Team B ${basketballRound2B}${notes ? `; ${notes}` : ''}`
+          ? `Round 1: Team A ${basketballRound1A} - Team B ${basketballRound1B}; Round 2: Team A ${basketballRound2A} - Team B ${basketballRound2B}; Round 3: Team A ${basketballRound3A} - Team B ${basketballRound3B}${notes ? `; ${notes}` : ''}`
           : notes,
       };
 
@@ -190,6 +192,8 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
       setBasketballRound1B(0);
       setBasketballRound2A(0);
       setBasketballRound2B(0);
+      setBasketballRound3A(0);
+      setBasketballRound3B(0);
       setNotes('');
       loadStationMatches();
     } catch (err: any) {
@@ -279,7 +283,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
               <div>
                 <div className="flex items-center gap-2 text-yellow-400">
                   <Timer className="w-5 h-5" />
-                  <h2 id="station-timer-heading" className="text-sm font-black uppercase tracking-widest">{stationId === 'pool' ? 'Pool Table Station Timer' : stationId === 'darts' ? 'Darts Station Timer' : 'Foosball Station Rules'}</h2>
+                  <h2 id="station-timer-heading" className="text-sm font-black uppercase tracking-widest">{stationId === 'pool' ? 'Pool Table Station Timer' : stationId === 'darts' ? 'Darts Station Timer' : stationId === 'basketball' ? 'Basketball Station Timer' : 'Foosball Station Rules'}</h2>
                 </div>
                 <p className="mt-2 text-xs font-mono text-zinc-400 uppercase tracking-wide">
                   {stationId === 'pool'
@@ -500,7 +504,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
             </div>
             <p className="text-xs text-zinc-400">
               {stationId === 'basketball'
-                ? 'Two shooting rounds per team. Enter both teams\' scores for each round.'
+                ? 'Three shooting rounds per team. Enter both teams\' scores for each round.'
                 : 'Numeric points recorded here update the team\'s tiebreaker tally.'}
             </p>
             {stationId === 'basketball' ? (
@@ -508,6 +512,7 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                 {[
                   { label: 'Round 1', a: basketballRound1A, b: basketballRound1B, setA: setBasketballRound1A, setB: setBasketballRound1B },
                   { label: 'Round 2', a: basketballRound2A, b: basketballRound2B, setA: setBasketballRound2A, setB: setBasketballRound2B },
+                  { label: 'Round 3', a: basketballRound3A, b: basketballRound3B, setA: setBasketballRound3A, setB: setBasketballRound3B },
                 ].map(round => (
                   <div key={round.label} className="rounded border border-zinc-800 bg-black/40 p-3 space-y-3">
                     <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-300">{round.label}</h3>
@@ -531,14 +536,14 @@ export const StationMaster: React.FC<StationMasterProps> = ({ stationId, onNavig
                 <div className="space-y-1">
                   <span className="text-[11px] font-mono text-zinc-500 uppercase block">{teams.find(t => String(t.id) === teamAId)?.name || 'Team A'} Final Score (Auto)</span>
                   <div className="w-full bg-black border border-yellow-400/40 rounded px-4 py-3 text-yellow-400 font-mono font-black text-2xl">
-                    {basketballRound1A + basketballRound2A}
+                    {basketballRound1A + basketballRound2A + basketballRound3A}
                   </div>
                 </div>
                 {teamBId && (
                   <div className="space-y-1">
                     <span className="text-[11px] font-mono text-zinc-500 uppercase block">{teams.find(t => String(t.id) === teamBId)?.name || 'Team B'} Final Score (Auto)</span>
                     <div className="w-full bg-black border border-yellow-400/40 rounded px-4 py-3 text-yellow-400 font-mono font-black text-2xl">
-                      {basketballRound1B + basketballRound2B}
+                      {basketballRound1B + basketballRound2B + basketballRound3B}
                     </div>
                   </div>
                 )}
